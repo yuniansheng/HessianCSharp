@@ -156,7 +156,7 @@ namespace hessiancsharp.io
                     foreach (Hashtable line in stacktrace)
                     {
                         sb.Append(" at ");
-                        
+
                         sb.Append(line["declaringClass"]);
                         sb.Append(".");
                         sb.Append(line["methodName"]);
@@ -988,6 +988,15 @@ namespace hessiancsharp.io
         }
 
         /// <summary>
+        /// Reads a reference.
+        /// </summary>
+        /// <returns>reference object</returns>
+        public override object ReadRef()
+        {
+            return m_arrRefs[ParseInt()];
+        }
+
+        /// <summary>
         ///   Adds an object reference.
         /// </summary>
         public override int AddRef(Object obj)
@@ -1001,12 +1010,20 @@ namespace hessiancsharp.io
         }
 
         /// <summary>
-        /// Reads a reference.
+        /// Set a list/map reference.
         /// </summary>
-        /// <returns>reference object</returns>
-        public override object ReadRef()
+        public override void SetRef(int i, object objReference)
         {
-            return m_arrRefs[ParseInt()];
+            m_arrRefs[i] = objReference;
+        }
+
+        /// <summary>
+        /// Resets the references for streaming.
+        /// </summary>
+        public override void ResetReferences()
+        {
+            if (m_arrRefs != null)
+                m_arrRefs.Clear();
         }
 
         /// <summary>

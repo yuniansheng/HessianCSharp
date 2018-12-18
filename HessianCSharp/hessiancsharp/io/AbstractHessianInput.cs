@@ -166,11 +166,29 @@ namespace hessiancsharp.io
         public abstract void ReadListEnd();
 
         /// <summary>
+        /// Reads a reference.
+        /// </summary>
+        /// <returns>reference object</returns>
+        public abstract object ReadRef();
+
+        /// <summary>
         ///   Adds an object reference.
         /// </summary>
         /// <param name="objReference">Reference object</param>
         /// <returns>Reference number</returns>
         public abstract int AddRef(object objReference);
+
+        /// <summary>
+        /// Sets an object reference.
+        /// </summary>
+        /// <param name="i">Reference number</param>
+        /// <param name="objReference">Reference object</param>
+        public abstract void SetRef(int i, object objReference);
+
+        /// <summary>
+        /// Resets the references for streaming.
+        /// </summary>
+        public virtual void ResetReferences() { }
 
         /// <summary>
         ///   Read the end byte
@@ -219,12 +237,6 @@ namespace hessiancsharp.io
         /// </summary>
         /// <returns>Read date as miliseconds since the epoche</returns>
         public abstract long ReadUTCDate();
-
-        /// <summary>
-        /// Reads a reference.
-        /// </summary>
-        /// <returns>reference object</returns>
-        public abstract object ReadRef();
 
         /// <summary>
         /// Reads a InputStream.

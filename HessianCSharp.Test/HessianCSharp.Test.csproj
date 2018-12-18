@@ -57,7 +57,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="Model\Foo.cs" />
+    <Compile Include="Model\Person.cs" />
+    <Compile Include="HessianTest.cs" />
+    <Compile Include="Model\RpcRequest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

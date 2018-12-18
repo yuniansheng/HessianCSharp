@@ -309,13 +309,13 @@ namespace burlapcsharp.io
 
             m_sBuild.Length = 0;
 
-            
-            
-            for (; ! IsWhitespace(ch) && ch != '<'; ch = Read())
-              m_sBuild.Append((char) ch);
+
+
+            for (; !IsWhitespace(ch) && ch != '<'; ch = Read())
+                m_sBuild.Append((char)ch);
 
             m_intPeek = ch;
-            
+
             return System.Double.Parse(m_sBuild.ToString());
         }
 
@@ -326,7 +326,7 @@ namespace burlapcsharp.io
         protected internal virtual long ParseDate()
         {
             if (m_utcCalendar == null)
-            {                
+            {
                 m_utcCalendar = new System.Globalization.GregorianCalendar();
             }
 
@@ -428,7 +428,7 @@ namespace burlapcsharp.io
             {
             }
 
-            
+
 
             m_intPeek = ch;
             //TODO: wenn es tut die Methode mit Parameter calender überarbeiten, calender entfernen.
@@ -537,7 +537,7 @@ namespace burlapcsharp.io
 
         protected internal virtual CBurlapException ExpectedTag(System.String expect, int tag)
         {
-            return new CBurlapException("expected " + expect + " at " + TagName(tag));            
+            return new CBurlapException("expected " + expect + " at " + TagName(tag));
         }
 
         protected internal static String TagName(int tag)
@@ -735,7 +735,7 @@ namespace burlapcsharp.io
 
             return bos;
         }
-       
+
         #endregion
 
 
@@ -823,9 +823,9 @@ namespace burlapcsharp.io
 
         public void ExpectTag(int expectTag)
         {
-            int tag = ParseTag();          
+            int tag = ParseTag();
             if (tag != expectTag)
-              throw new CBurlapException("expected " + m_tagMap[expectTag] + " at " + m_tagMap[tag]);
+                throw new CBurlapException("expected " + m_tagMap[expectTag] + " at " + m_tagMap[tag]);
         }
 
 
@@ -842,7 +842,7 @@ namespace burlapcsharp.io
             if (tag == TAG_FAULT)
             {
                 //TODO: Better Exception handling
-                 //throw PrepareFault();
+                //throw PrepareFault();
                 throw new CBurlapException("Exception in ReadReply");
             }
             else
@@ -920,9 +920,9 @@ namespace burlapcsharp.io
                 case TAG_NULL:
                     ExpectTag(TAG_NULL_END);
                     return;
-                //TODO:
-                //default:
-                //    throw ExpectedTag("null", tag);
+                    //TODO:
+                    //default:
+                    //    throw ExpectedTag("null", tag);
             }
         }
 
@@ -1031,10 +1031,10 @@ namespace burlapcsharp.io
                     ExpectTag(TAG_DOUBLE_END);
                     return value;
 
-               
-            default:
-                throw ExpectedTag("int", intTag);
-               
+
+                default:
+                    throw ExpectedTag("int", intTag);
+
             }
         }
 
@@ -1112,29 +1112,29 @@ namespace burlapcsharp.io
             switch (tag)
             {
                 case TAG_NULL:
-                  value = 0;
-                  ExpectTag(TAG_NULL_END);
-                  return value;
-                  
+                    value = 0;
+                    ExpectTag(TAG_NULL_END);
+                    return value;
+
                 case TAG_BOOLEAN:
-                  value = ParseInt();
-                  ExpectTag(TAG_BOOLEAN_END);
-                  return value;
-                  
+                    value = ParseInt();
+                    ExpectTag(TAG_BOOLEAN_END);
+                    return value;
+
                 case TAG_INT:
                     value = ParseInt();
                     ExpectTag(TAG_INT_END);
-                  return value;
-                  
+                    return value;
+
                 case TAG_LONG:
-                  value = ParseLong();
-                  ExpectTag(TAG_LONG_END);
-                  return value;
-                  
+                    value = ParseLong();
+                    ExpectTag(TAG_LONG_END);
+                    return value;
+
                 case TAG_DOUBLE:
-                  value = ParseDouble();
-                  ExpectTag(TAG_DOUBLE_END);
-                  return value;
+                    value = ParseDouble();
+                    ExpectTag(TAG_DOUBLE_END);
+                    return value;
                 default:
                     throw ExpectedTag("double", tag);
             }
@@ -1164,7 +1164,7 @@ namespace burlapcsharp.io
 
             return value;
 
-             */ 
+             */
 
 
             /* 
@@ -1179,7 +1179,7 @@ namespace burlapcsharp.io
             return 0;
         }
 
-         /// <summary> 
+        /// <summary> 
         /// Reads a date.
         /// <code>
         /// <date>ISO-8609 date</date>
@@ -1280,20 +1280,21 @@ namespace burlapcsharp.io
         {
             int tag = ParseTag();
 
-           
-            switch (tag) {
+
+            switch (tag)
+            {
                 case TAG_NULL:
-                  ExpectTag(TAG_NULL_END);
-                  return null;
+                    ExpectTag(TAG_NULL_END);
+                    return null;
 
                 case TAG_BASE64:
-                  byte []data = ParseBytes();
-                  ExpectTag(TAG_BASE64_END);
+                    byte[] data = ParseBytes();
+                    ExpectTag(TAG_BASE64_END);
 
-                  return data;
-                  
+                    return data;
+
                 default:
-                  throw ExpectedTag("bytes", tag);
+                    throw ExpectedTag("bytes", tag);
             }
 
 
@@ -1366,61 +1367,61 @@ namespace burlapcsharp.io
             else
             {
                 int intTag = ParseTag();
-                
-                    switch (intTag)
-                    {
-                            case TAG_NULL:
-                                ExpectTag(TAG_NULL_END);
-                                return null;
-                            case TAG_MAP:
-                            {
-                                string strType = ReadType();
-                                AbstractDeserializer deserializer = this.m_serializerFactory.GetObjectDeserializer(strType);
 
-                                if (expectedType != deserializer.GetOwnType() && expectedType.IsAssignableFrom(deserializer.GetOwnType()))
-                                    return deserializer.ReadMap(this);
+                switch (intTag)
+                {
+                    case TAG_NULL:
+                        ExpectTag(TAG_NULL_END);
+                        return null;
+                    case TAG_MAP:
+                        {
+                            string strType = ReadType();
+                            AbstractDeserializer deserializer = this.m_serializerFactory.GetObjectDeserializer(strType);
 
-                                deserializer = m_serializerFactory.GetDeserializer(expectedType);
-
-
+                            if (expectedType != deserializer.GetOwnType() && expectedType.IsAssignableFrom(deserializer.GetOwnType()))
                                 return deserializer.ReadMap(this);
-                            }
-                        case TAG_REF:
-                            {
-                                int intRefNumber = ParseInt();
-                                ExpectTag(TAG_REF_END);
-                                return m_arrRefs[intRefNumber];
-                            }                       
-                            /*
-                        case TAG_REMOTE:
-                            {
-                                string type = ReadType();
-                                string url = ReadString();
 
-                                ExpectTag(TAG_REMOTE_END);
+                            deserializer = m_serializerFactory.GetDeserializer(expectedType);
 
-                                Object remote = ResolveRemote(type, url);
 
-                                return remote;
-                            }
-                             */
-                        case TAG_LIST:
-                            {                                
-                                string strType = this.ReadType();
-                                int intLength = this.ReadLength();
-                                AbstractDeserializer deserializer = this.m_serializerFactory.GetObjectDeserializer(strType);
-                                if (expectedType != deserializer.GetType() && expectedType.IsAssignableFrom(deserializer.GetType()))
-                                    //if (expectedType != deserializer.GetOwnType() && expectedType.IsAssignableFrom(deserializer.GetOwnType()))
-                                    return deserializer.ReadList(this, intLength);
-                                deserializer = m_serializerFactory.GetDeserializer(expectedType);
-                                return deserializer.ReadList(this, intLength);
-                            }
+                            return deserializer.ReadMap(this);
+                        }
+                    case TAG_REF:
+                        {
+                            int intRefNumber = ParseInt();
+                            ExpectTag(TAG_REF_END);
+                            return m_arrRefs[intRefNumber];
+                        }
+                    /*
+                case TAG_REMOTE:
+                    {
+                        string type = ReadType();
+                        string url = ReadString();
+
+                        ExpectTag(TAG_REMOTE_END);
+
+                        Object remote = ResolveRemote(type, url);
+
+                        return remote;
                     }
+                     */
+                    case TAG_LIST:
+                        {
+                            string strType = this.ReadType();
+                            int intLength = this.ReadLength();
+                            AbstractDeserializer deserializer = this.m_serializerFactory.GetObjectDeserializer(strType);
+                            if (expectedType != deserializer.GetType() && expectedType.IsAssignableFrom(deserializer.GetType()))
+                                //if (expectedType != deserializer.GetOwnType() && expectedType.IsAssignableFrom(deserializer.GetOwnType()))
+                                return deserializer.ReadList(this, intLength);
+                            deserializer = m_serializerFactory.GetDeserializer(expectedType);
+                            return deserializer.ReadList(this, intLength);
+                        }
+                }
 
-                    m_intPeekTag = intTag;
+                m_intPeekTag = intTag;
 
-                    objResult = m_serializerFactory.GetDeserializer(expectedType).ReadObject(this);
-                
+                objResult = m_serializerFactory.GetDeserializer(expectedType).ReadObject(this);
+
             }
             return objResult;
         }
@@ -1491,7 +1492,7 @@ namespace burlapcsharp.io
                         return data;
                     }
                 case TAG_LIST:
-                    {                 
+                    {
                         string strType = this.ReadType();
                         int intLength = this.ReadLength();
                         return m_serializerFactory.ReadList(this, intLength, strType);
@@ -1499,17 +1500,17 @@ namespace burlapcsharp.io
                 case TAG_MAP:
                     {
                         String strType = ReadType();
-                        return m_serializerFactory.ReadMap(this, strType);                       
+                        return m_serializerFactory.ReadMap(this, strType);
                     }
-                 case TAG_REF:
+                case TAG_REF:
                     {
-                      int intRef = ParseInt();
-                      ExpectTag(TAG_REF_END);
-                      return m_arrRefs[intRef];
-                    }                   
+                        int intRef = ParseInt();
+                        ExpectTag(TAG_REF_END);
+                        return m_arrRefs[intRef];
+                    }
                 case TAG_REMOTE:
                     {
-                     
+
                         throw new CBurlapException("REMOTE is not implimented");
                         /*
                         //TODO:
@@ -1518,7 +1519,7 @@ namespace burlapcsharp.io
                         ExpectTag(TAG_REMOTE_END);
                         return ResolveRemote(strType, strUrl);
                          */
-                    }              
+                    }
                 default:
                     throw new CHessianException("unknown code:" + TagName(intTag));
             }
@@ -1537,21 +1538,13 @@ namespace burlapcsharp.io
              */
         }
 
-    
-        /// <summary>
-        /// Reads a remote object.
-        /// </summary>
-        public override object ReadRef()
-        {
-            return m_arrRefs[ParseInt()];
-        }
 
         /// <summary>
         /// Reads the start of a map.
         /// </summary>
         public override int ReadMapStart()
         {
-             return ParseTag();
+            return ParseTag();
         }
 
         /// <summary>
@@ -1583,9 +1576,9 @@ namespace burlapcsharp.io
             int code = ParseTag();
 
             if (code < 100)
-                throw new CBurlapException("unknown code:" + (char) code);
+                throw new CBurlapException("unknown code:" + (char)code);
         }
-       
+
         /// <summary>
         /// Reads the end of the map
         /// </summary>
@@ -1603,24 +1596,40 @@ namespace burlapcsharp.io
         }
 
         /// <summary>
+        /// Reads a remote object.
+        /// </summary>
+        public override object ReadRef()
+        {
+            return m_arrRefs[ParseInt()];
+        }
+
+        /// <summary>
         /// Adds a list/map reference.
         /// </summary>
         public override int AddRef(Object obj)
         {
             if (m_arrRefs == null)
-				m_arrRefs = new ArrayList();
-			
-			m_arrRefs.Add(obj);
+                m_arrRefs = new ArrayList();
 
-			return m_arrRefs.Count -1;
+            m_arrRefs.Add(obj);
+
+            return m_arrRefs.Count - 1;
         }
-      
+
         /// <summary>
-        /// Adds a list/map reference.
+        /// Set a list/map reference.
         /// </summary>
-        public void SetRef(int i, Object obj)
+        public override void SetRef(int i, object objReference)
         {
-            m_arrRefs[i] = obj;
+            m_arrRefs[i] = objReference;
+        }
+
+        /// <summary>
+        /// Resets the references for streaming.
+        /// </summary>
+        public override void ResetReferences()
+        {
+            base.ResetReferences();
         }
 
 
@@ -1667,10 +1676,10 @@ namespace burlapcsharp.io
 
             int ch = SkipWhitespace();
             int endTagDelta = 0;
-            
+
             if (ch != '<')
                 throw ExpectedChar("'<'", ch);
-            
+
 
             ch = Read();
             if (ch == '/')
@@ -1678,23 +1687,23 @@ namespace burlapcsharp.io
                 endTagDelta = 100;
                 ch = m_srInput.ReadByte();
             }
-            
-                   
-            if (! IsTagChar(ch))
+
+
+            if (!IsTagChar(ch))
                 throw ExpectedChar("tag", ch);
 
 
             m_sBuild.Length = 0;
             for (; IsTagChar(ch); ch = Read())
                 m_sBuild.Append((char)ch);
-         
+
             if (ch != '>')
                 throw ExpectedChar("'>'", ch);
 
 
             object value = (object)m_tagMap[m_sBuild.ToString()];
-           
-        
+
+
             if (value == null)
                 throw new CBurlapException("Unknown tag <" + m_sBuild.ToString() + ">");
 
@@ -1721,7 +1730,7 @@ namespace burlapcsharp.io
         }
 
 
-       
+
         public override Stream ReadInputStream()
         {
             return null;
