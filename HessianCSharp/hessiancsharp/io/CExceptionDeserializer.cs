@@ -83,9 +83,6 @@ namespace hessiancsharp.io
             object result = null;
             try
             {
-#if COMPACT_FRAMEWORK
-            	//CF TODO: tbd
-#else
                 try
                 {
                     result = Activator.CreateInstance(this.m_type, new object[2] { _message, _innerException });
@@ -108,7 +105,6 @@ namespace hessiancsharp.io
                         }
                     }
                 }
-#endif
             }
             catch (Exception)
             {

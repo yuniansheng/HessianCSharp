@@ -82,13 +82,6 @@ namespace hessiancsharp.io
 
         #endregion CLASS_FIELDS
 
-#if COMPACT_FRAMEWORK
-		/// <summary>
-		/// List of all files in current directory with extension ".exe" and ".dll"
-		/// </summary>
-		private IList m_assamblyFiles = null;
-#endif
-
         #region STATIC_CONSTRUCTORS
 
         /// <summary>
@@ -296,24 +289,6 @@ namespace hessiancsharp.io
             }
             else
             {
-#if COMPACT_FRAMEWORK
-				// do CF stuff
-				if (m_assamblyFiles == null)
-				{
-					m_assamblyFiles = AllAssamblyNamesInCurrentDirectory();
-				}
-				foreach(string ass in m_assamblyFiles)
-				{
-					string typeString = strType + ","+ass;
-					Type searchType = Type.GetType(typeString);
-					if(searchType != null)
-					{
-						abstractDeserializer = GetDeserializer(searchType);
-						return abstractDeserializer;
-					}
-				}
-#else
-
                 // do other stuff
                 try
                 {
@@ -335,7 +310,6 @@ namespace hessiancsharp.io
                 catch (Exception)
                 {
                 }
-#endif
             }
 
             /* TODO: Implementieren Type.GetType(type) geht nicht, man muss die Assembly eingeben.
@@ -343,64 +317,6 @@ namespace hessiancsharp.io
             //deserializer = getDeserializer(Type.GetType(type));
             return abstractDeserializer;
         }
-
-#if COMPACT_FRAMEWORK
-				// do CF stuff
-		/// <summary>
-		/// Returns a List of files in current directory with extension ".exe" and ".dll".
-		/// </summary>
-		/// <returns>List of all files as string </returns>
-		private IList AllAssamblyNamesInCurrentDirectory()
-		{
-			ArrayList result = new ArrayList();
-
-			string currentDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().GetModules()[0].FullyQualifiedName);
-
-			try
-			{
-				//Create A new Instance from DirectoryInfo, to Get information
-				//About The current directory strDirectory
-				DirectoryInfo CurDir = new  DirectoryInfo(currentDirectory);
-
-				//Array Holds Files and thier information
-				FileInfo[] FilesArray;
-				/*
-				  * Call GetFiles() returns and array of Files inside
-				  * the Current Directory strDirectory
-				*/
-
-				FilesArray = CurDir.GetFiles();
-
-				//Get every FileInfo inside the current Directory
-				foreach (FileInfo curfileInfo in FilesArray)
-				{
-					/*
-					  *Check for File Extension
-					*/
-
-					if(curfileInfo.Extension == ".exe")
-					{
-						string name = curfileInfo.Name.Substring(0,curfileInfo.Name.IndexOf(".exe"));
-
-						result.Add(name);
-						//
-					}
-					else if(curfileInfo.Extension == ".dll")
-					{
-						string name = curfileInfo.Name.Substring(0,curfileInfo.Name.IndexOf(".dll"));
-
-						result.Add(name);
-					}
-				}
-			}
-			catch(UnauthorizedAccessException)
-			{
-				//TODO:"Access Denied!"
-			}
-			return result;
-		}
-
-#endif
 
         /// <summary>
         /// Reads the object as a map. (Hashtable)

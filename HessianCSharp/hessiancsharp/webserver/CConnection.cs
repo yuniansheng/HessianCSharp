@@ -90,7 +90,7 @@ namespace hessiancsharp.webserver
 			//Reads the Header of HTTP Message
 			try {
 				ReadHeaders();
-			} catch (NotSupportedException e) {
+			} catch (NotSupportedException) {
                 SendError(500, "Close");
 				m_socket.Close();
 				m_stream.Close();
@@ -105,7 +105,7 @@ namespace hessiancsharp.webserver
                 objectSkeleton = new CHessianSkeleton(m_apiType, m_Service);
 				objectSkeleton.invoke(inHessian, tempOutHessian);
                 WriteResponse(memoryStream.ToArray());
-			} catch (Exception e) {
+			} catch (Exception) {
                 SendError(500, "Close");
 			} finally {
 				m_socket.Close();
