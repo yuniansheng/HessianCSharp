@@ -9,6 +9,8 @@
     <Description>The .net implementation of hessian serialize protocol</Description>
     <PackageReleaseNotes></PackageReleaseNotes>
     <PackageTags>hessian</PackageTags>
+    <RepositoryUrl>https://github.com/yuniansheng/HessianCSharp/tree/netstandard</RepositoryUrl>
+    <Version>1.0.0-pre1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
