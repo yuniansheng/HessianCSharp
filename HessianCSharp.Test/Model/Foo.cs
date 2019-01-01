@@ -4,12 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace com.nelson
+namespace com.caucho.moel
 {
     public class Foo
     {
-        public DateTime date;
-        public object[] classes;
-        public Person[] people;
+        public int intValue = 1;
+        public long longValue = 12345678987654321L;
+        public bool bValue = true;
+        public string sValue = "Hello World";
     }
 }

@@ -113,19 +113,46 @@ namespace hessiancsharp.io
 
             abstractHessianInput.ReadMapEnd();
 
-            if (strInitValue == null)
-                throw new IOException(m_type.FullName + " expects name."); //$NON-NLS-1$
+            object obj = Create(strInitValue);
+            abstractHessianInput.AddRef(obj);
+            return obj;
+        }
 
-            try
+        public override object ReadObject(AbstractHessianInput abstractHessianInput, object[] fields)
+        {
+            string[] fieldNames = (string[])fields;
+
+            string value = null;
+
+            for (int i = 0; i < fieldNames.Length; i++)
             {
-                return m_constructor.Invoke(new Object[] { strInitValue });
+                if ("value" == fieldNames[i])
+                    value = abstractHessianInput.ReadString();
+                else
+                    abstractHessianInput.ReadObject();
             }
-            catch (Exception e)
-            {
-                throw new IOException(e.ToString());
-            }
+
+            object obj = Create(value);
+
+            abstractHessianInput.AddRef(obj);
+
+            return obj;
         }
 
         #endregion PUBLIC_METHODS
+
+        protected object Create(string value)
+        {
+            if (value == null)
+                throw new IOException(m_type.Name + " expects name.");
+            try
+            {
+                return m_constructor.Invoke(new object[] { value });
+            }
+            catch (Exception e)
+            {
+                throw new CHessianException(m_type.Name + ": value=" + value, e);
+            }
+        }
     }
 }

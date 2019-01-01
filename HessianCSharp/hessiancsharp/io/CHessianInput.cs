@@ -129,52 +129,6 @@ namespace hessiancsharp.io
         }
 
         /// <summary>
-        /// Prepares the fault.
-        /// </summary>
-        /// <returns>HessianProtocolException with fault reason</returns>
-        private Exception PrepareFault()
-        {
-            Exception exp = null;
-            Hashtable htFault = this.ReadFault();
-            object objDetail = htFault["detail"]; //$NON-NLS-1$
-            string strMessage = (String)htFault["message"]; //$NON-NLS-1$
-            string exceptionMessage = strMessage;
-            if (objDetail != null && typeof(Exception).IsAssignableFrom(objDetail.GetType()))
-            {
-                exp = objDetail as Exception;
-            }
-            else
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine(strMessage);
-                sb.AppendLine();
-
-                if (objDetail != null && ((Hashtable)objDetail)["stackTrace"] != null)
-                {
-                    sb.AppendLine("Server Stacktrace: ");
-                    object[] stacktrace = (object[])((Hashtable)objDetail)["stackTrace"];
-                    foreach (Hashtable line in stacktrace)
-                    {
-                        sb.Append(" at ");
-
-                        sb.Append(line["declaringClass"]);
-                        sb.Append(".");
-                        sb.Append(line["methodName"]);
-
-                        sb.Append(" (");
-                        sb.Append(line["fileName"]);
-                        sb.Append(":");
-                        sb.Append(line["lineNumber"]);
-                        sb.Append(") ");
-                        sb.Append(Environment.NewLine);
-                    }
-                }
-                exp = new CHessianException(sb.ToString());
-            }
-            return exp;
-        }
-
-        /// <summary>
         /// Starts reading the reply
         /// A successful completion will have a single value:
         /// r
@@ -910,7 +864,8 @@ namespace hessiancsharp.io
             if (intTag == PROT_REPLY_FAULT)
             {
                 //throw PrepareFault();
-                CHessianException wrapper = new CHessianException("received fault", PrepareFault()); //$NON-NLS-1$
+                Hashtable htFault = ReadFault();
+                CHessianException wrapper = new CHessianException("received fault", PrepareFault(htFault)); //$NON-NLS-1$
                 wrapper.FaultWrapper = true;
                 throw wrapper;
             }

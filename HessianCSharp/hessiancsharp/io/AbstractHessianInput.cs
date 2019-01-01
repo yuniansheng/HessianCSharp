@@ -36,7 +36,9 @@
 #region NAMESPACES
 
 using System;
+using System.Collections;
 using System.IO;
+using System.Text;
 
 #endregion NAMESPACES
 
@@ -277,5 +279,54 @@ namespace hessiancsharp.io
         public abstract void CompleteCall();
 
         #endregion PUBLIC_METHODS
+
+        /// <summary>
+        /// Prepares the fault.
+        /// </summary>
+        /// <returns>HessianProtocolException with fault reason</returns>
+        protected Exception PrepareFault(Hashtable htFault)
+        {
+            Exception exp = null;
+            object objDetail = htFault["detail"]; //$NON-NLS-1$
+            string strMessage = (String)htFault["message"]; //$NON-NLS-1$            
+            if (objDetail != null && typeof(Exception).IsAssignableFrom(objDetail.GetType()))
+            {
+                exp = objDetail as Exception;
+            }
+            else if (htFault.ContainsKey("code"))
+            {
+                string code = (string)htFault["code"];
+                exp = new HessianServiceException(strMessage, code, objDetail);
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine(strMessage);
+                sb.AppendLine();
+
+                if (objDetail != null && ((Hashtable)objDetail)["stackTrace"] != null)
+                {
+                    sb.AppendLine("Server Stacktrace: ");
+                    object[] stacktrace = (object[])((Hashtable)objDetail)["stackTrace"];
+                    foreach (Hashtable line in stacktrace)
+                    {
+                        sb.Append(" at ");
+
+                        sb.Append(line["declaringClass"]);
+                        sb.Append(".");
+                        sb.Append(line["methodName"]);
+
+                        sb.Append(" (");
+                        sb.Append(line["fileName"]);
+                        sb.Append(":");
+                        sb.Append(line["lineNumber"]);
+                        sb.Append(") ");
+                        sb.Append(Environment.NewLine);
+                    }
+                }
+                exp = new CHessianException(sb.ToString());
+            }
+            return exp;
+        }
     }
 }

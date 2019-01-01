@@ -36,6 +36,7 @@
 #region NAMESPACES
 
 using System;
+using System.IO;
 
 #endregion NAMESPACES
 
@@ -93,6 +94,24 @@ namespace hessiancsharp.io
             return ReadMap(abstractHessianInput);
         }
 
+        public override object ReadObject(AbstractHessianInput abstractHessianInput, object[] fields)
+        {
+            String[] fieldNames = (String[])fields;
+            String name = null;
+
+            for (int i = 0; i < fieldNames.Length; i++)
+            {
+                if ("name" == fieldNames[i])
+                    name = abstractHessianInput.ReadString();
+                else
+                    abstractHessianInput.ReadObject();
+            }
+
+            Object obj = Create(name);
+            abstractHessianInput.AddRef(obj);
+            return obj;
+        }
+
         public override object ReadMap(AbstractHessianInput abstractHessianInput)
         {
             string enumName = null;
@@ -106,7 +125,7 @@ namespace hessiancsharp.io
             }
             abstractHessianInput.ReadMapEnd();
 
-            object result = Enum.Parse(e_type, enumName, false);
+            object result = Create(enumName);
             abstractHessianInput.AddRef(result);
             return result;
         }
@@ -121,5 +140,19 @@ namespace hessiancsharp.io
         }
 
         #endregion PUBLIC_METHODS
+
+        private Object Create(String name)
+        {
+            if (name == null)
+                throw new IOException(e_type.Name + " expects name.");
+            try
+            {
+                return Enum.Parse(e_type, name, false);
+            }
+            catch (Exception e)
+            {
+                throw new CHessianException(e_type.Name + ": name=" + name, e);
+            }
+        }
     }
 }

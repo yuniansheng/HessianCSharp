@@ -38,6 +38,7 @@
 
 #region NAMESPACES
 
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections;
 using System.IO;
@@ -53,6 +54,14 @@ namespace hessiancsharp.io
     /// </summary>
     public class CSerializerFactory
     {
+        private Lazy<AbstractDeserializer> _hashMapDeserializer;
+
+        public CSerializerFactory()
+        {
+            _hashMapDeserializer = new Lazy<AbstractDeserializer>(
+                () => new CMapDeserializer(typeof(Hashtable)), true);
+        }
+
         #region CLASS_FIELDS
 
         /// <summary>
@@ -79,6 +88,12 @@ namespace hessiancsharp.io
         /// Cache for deserializer
         /// </summary>
         private static Hashtable m_htCachedDeserializerMap = null;
+
+        private static AbstractDeserializer _arrayListDeserializer;
+
+        private static readonly ILogger log = Logger.GetLogger<CSerializerFactory>();
+
+        private static readonly CSerializerFactory _defaultSerializerFactory = new CSerializerFactory();
 
         #endregion CLASS_FIELDS
 
@@ -126,6 +141,11 @@ namespace hessiancsharp.io
                 new CStringValueDeserializer(typeof(System.IO.FileInfo)));
             //m_htSerializerMap.Add(typeof (System.DateTime), new CDateSerializer());
             //m_htDeserializerMap.Add(typeof (System.DateTime), new CDateDeserializer());
+        }
+
+        public static CSerializerFactory CreateDefault()
+        {
+            return _defaultSerializerFactory;
         }
 
         #endregion STATIC_CONSTRUCTORS
@@ -319,6 +339,41 @@ namespace hessiancsharp.io
         }
 
         /// <summary>
+        /// Reads the object as a map.
+        /// </summary>
+        public AbstractDeserializer GetListDeserializer(string strType, Type type)
+        {
+            var reader = GetListDeserializer(strType);
+
+            if (type == null
+                || type == reader.GetOwnType()
+                || type.IsAssignableFrom(reader.GetOwnType()))
+            {
+                return reader;
+            }
+
+            return GetDeserializer(type);
+        }
+
+        /// <summary>
+        /// Reads the object as a map.
+        /// </summary>
+        public AbstractDeserializer GetListDeserializer(string strType)
+        {
+            var deserializer = GetDeserializer(strType);
+
+            if (deserializer != null)
+                return deserializer;
+            else if (_arrayListDeserializer != null)
+                return _arrayListDeserializer;
+            else
+            {
+                _arrayListDeserializer = new CCollectionDeserializer(typeof(ArrayList));
+                return _arrayListDeserializer;
+            }
+        }
+
+        /// <summary>
         /// Reads the object as a map. (Hashtable)
         /// </summary>
         /// <param name="abstractHessianInput">HessianInput instance to read from</param>
@@ -331,13 +386,39 @@ namespace hessiancsharp.io
             if (abstractDeserializer == null)
             {
                 // mw 2012-08-14 - hier den Datumstyp java.sql.Timestamp abfangen
-                if (strType != null && (strType.Equals("java.sql.Timestamp") || strType.Equals("java.sql.Time") || strType.Equals("java.sql.Date"))) //$NON-NLS-1$ $NON-NLS-2$ $NON-NLS-3$
+                if (strType != null && (
+                    strType.Equals("java.sql.Timestamp") ||
+                    strType.Equals("java.sql.Time") ||
+                    strType.Equals("java.sql.Date"))
+                    ) //$NON-NLS-1$ $NON-NLS-2$ $NON-NLS-3$
                     abstractDeserializer = new CJavaTimestampDeserializer();
                 else
-                    abstractDeserializer = new CMapDeserializer(typeof(Hashtable));
+                    abstractDeserializer = _hashMapDeserializer.Value;
             }
 
             return abstractDeserializer.ReadMap(abstractHessianInput);
+        }
+
+        public AbstractDeserializer GetObjectDeserializer(string type, Type cl)
+        {
+            AbstractDeserializer reader = GetObjectDeserializer(type);
+
+            if (cl == null
+                    || cl == reader.GetOwnType()
+                    || cl.IsAssignableFrom(reader.GetOwnType())
+                    || reader.IsReadResolve()
+                    || (typeof(HessianHandle)).IsAssignableFrom(reader.GetOwnType()))
+            {
+                return reader;
+            }
+
+            if (log.IsEnabled(LogLevel.Trace))
+            {
+                log.LogTrace("hessian: expected deserializer '" + cl.Name + "' at '" + type + "' ("
+                        + reader.GetOwnType().Name + ")");
+            }
+
+            return GetDeserializer(cl);
         }
 
         /// <summary>
@@ -352,7 +433,7 @@ namespace hessiancsharp.io
                 return abstractDeserializer;
             else
             {
-                return new CMapDeserializer(typeof(Hashtable));
+                return _hashMapDeserializer.Value;
             }
         }
 
@@ -374,6 +455,7 @@ namespace hessiancsharp.io
                     abstractHessianInput,
                     intLength);
         }
+
 
         #endregion PUBLIC_METHODS
     }

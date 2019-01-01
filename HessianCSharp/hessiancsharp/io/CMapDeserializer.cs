@@ -79,17 +79,7 @@ namespace hessiancsharp.io
         /// <returns>Read map or null</returns>
         public override object ReadMap(AbstractHessianInput abstractHessianInput)
         {
-            IDictionary dictionary = null;
-            if ((m_type == null) || (m_type.IsInterface && typeof(IDictionary).IsAssignableFrom(m_type)))
-                dictionary = new Hashtable();
-            else if (m_type.Equals(typeof(Hashtable)))
-                dictionary = new Hashtable();
-            else
-            {
-                //dictionary = (IDictionary)Activator.CreateInstance(m_type);
-                dictionary = new Hashtable();
-            }
-            abstractHessianInput.AddRef(dictionary);
+            IDictionary dictionary = CreateMap(abstractHessianInput);
             while (!abstractHessianInput.IsEnd())
             {
                 Object key = abstractHessianInput.ReadObject();
@@ -129,6 +119,36 @@ namespace hessiancsharp.io
             return ReadMap(abstractHessianInput);
         }
 
+        public override object ReadObject(AbstractHessianInput abstractHessianInput, Object[] fields)
+        {
+            String[] fieldNames = (String[])fields;
+            IDictionary map = CreateMap(abstractHessianInput);
+
+            for (int i = 0; i < fieldNames.Length; i++)
+            {
+                string name = fieldNames[i];
+                map[name] = abstractHessianInput.ReadObject();
+            }
+
+            return map;
+        }
+
         #endregion PUBLIC_METHODS
+
+        private IDictionary CreateMap(AbstractHessianInput abstractHessianInput)
+        {
+            IDictionary dictionary = null;
+            if ((m_type == null) || (m_type.IsInterface && typeof(IDictionary).IsAssignableFrom(m_type)))
+                dictionary = new Hashtable();
+            else if (m_type.Equals(typeof(Hashtable)))
+                dictionary = new Hashtable();
+            else
+            {
+                //dictionary = (IDictionary)Activator.CreateInstance(m_type);
+                dictionary = new Hashtable();
+            }
+            abstractHessianInput.AddRef(dictionary);
+            return dictionary;
+        }
     }
 }

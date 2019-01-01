@@ -48,6 +48,11 @@ namespace hessiancsharp.io
     {
         #region PUBLIC_METHODS
 
+        public virtual bool IsReadResolve()
+        {
+            return false;
+        }
+
         /// <summary>
         /// Reads object
         /// </summary>
@@ -57,6 +62,36 @@ namespace hessiancsharp.io
         public virtual object ReadObject(AbstractHessianInput abstractHessianInput)
         {
             throw new CHessianException(this.GetType().ToString());
+        }
+
+        public virtual object ReadObject(AbstractHessianInput abstractHessianInput, string[] fieldNames)
+        {
+            return ReadObject(abstractHessianInput, (object[])fieldNames);
+        }
+
+        public virtual object ReadObject(AbstractHessianInput abstractHessianInput, object[] fields)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Creates an empty array for the deserializers field entries.
+        /// </summary>
+        /// <param name="len">number of fields to be read</param>
+        /// <returns>empty array of the proper field type.</returns>
+        public virtual object[] CreateFields(int len)
+        {
+            return new string[len];
+        }
+
+        /// <summary>
+        /// Returns the deserializer's field reader for the given name.
+        /// </summary>
+        /// <param name="name">the field name</param>
+        /// <returns>the deserializer's internal field reader</returns>
+        public virtual object CreateField(String name)
+        {
+            return name;
         }
 
         /// <summary>
@@ -86,6 +121,14 @@ namespace hessiancsharp.io
         /// <returns>Read list</returns>
         /// <exception cref="CHessianException"/>
         public virtual object ReadList(AbstractHessianInput abstractHessianInput, int intLength)
+        {
+            throw new CHessianException(this.GetType().ToString());
+        }
+
+        /// <summary>
+        /// Reads the length list
+        /// </summary>
+        public virtual object ReadLengthList(AbstractHessianInput abstractHessianInput, int intLength)
         {
             throw new CHessianException(this.GetType().ToString());
         }

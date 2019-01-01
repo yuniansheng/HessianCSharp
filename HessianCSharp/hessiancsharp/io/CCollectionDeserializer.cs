@@ -39,6 +39,7 @@
 using hessiancsharp.client;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 
 #endregion NAMESPACES
@@ -89,6 +90,11 @@ namespace hessiancsharp.io
 
         #region PUBLIC_METHODS
 
+        public override Type GetOwnType()
+        {
+            return m_type;
+        }
+
         /// <summary>
         /// Reads list.
         /// </summary>
@@ -96,15 +102,18 @@ namespace hessiancsharp.io
         /// <param name="intListLength">Length of the list</param>
         /// <returns>Return value is always an ArrayList - Instance,
         /// apart from StringCollection - Instances</returns>
-        public override System.Object ReadList(AbstractHessianInput abstractHessianInput, int intListLength)
+        public override object ReadList(AbstractHessianInput abstractHessianInput, int intListLength)
         {
-            if (m_type != null && IsGenericList(m_type))
-                return ReadGenericList(abstractHessianInput);
-            else
-                if (m_type != null && IsGenericHashSet(m_type))
-                    return ReadGenericHashSet(abstractHessianInput);
-                else
-                    return ReadUntypedList(abstractHessianInput);
+            Type itemType;
+            var collectionType = GetCollectionType(abstractHessianInput, out itemType);
+            return readCollection(abstractHessianInput, collectionType, itemType, 0);
+        }
+
+        public override object ReadLengthList(AbstractHessianInput abstractHessianInput, int intLength)
+        {
+            Type itemType;
+            var collectionType = GetCollectionType(abstractHessianInput, out itemType);
+            return readCollection(abstractHessianInput, collectionType, itemType, intLength);
         }
 
         public static bool IsGenericList(Type type)
@@ -125,55 +134,59 @@ namespace hessiancsharp.io
             return (listType.IsAssignableFrom(genTD));
         }
 
-        private Object ReadGenericList(AbstractHessianInput abstractHessianInput)
-        {
-            Type[] args = m_type.GetGenericArguments();
-            Type itemType = args[0];
-            Type listType = typeof(System.Collections.Generic.List<>).MakeGenericType(itemType);
-
-            return readCollection(abstractHessianInput, listType, itemType);
-        }
-
-        private Object ReadGenericHashSet(AbstractHessianInput abstractHessianInput)
-        {
-            Type[] args = m_type.GetGenericArguments();
-            Type itemType = args[0];
-            Type setType = typeof(System.Collections.Generic.HashSet<>).MakeGenericType(itemType);
-
-            return readCollection(abstractHessianInput, setType, itemType);
-        }
-
-        private Object readCollection(AbstractHessianInput abstractHessianInput, Type collectionType, Type itemType)
+        private Object readCollection(AbstractHessianInput abstractHessianInput, Type collectionType, Type itemType, int length)
         {
             object list = Activator.CreateInstance(collectionType);
             abstractHessianInput.AddRef(list);
 
+            var addMethod = collectionType.GetMethod("Add");
             int i = 0;
-            while (!abstractHessianInput.IsEnd())
+            if (length > 0)
             {
-                CHessianLog.AddBreadcrumb(i++);
-                object item = abstractHessianInput.ReadObject(itemType);
-                CHessianLog.RemoveBreadcrumb();
-                collectionType.InvokeMember("Add", BindingFlags.InvokeMethod, null, list, new object[] { item }); //$NON-NLS-1$
+                for (i = 0; i < length; i++)
+                {
+                    CHessianLog.AddBreadcrumb(i);
+                    object item = abstractHessianInput.ReadObject(itemType);
+                    CHessianLog.RemoveBreadcrumb();
+                    addMethod.Invoke(list, new object[] { item });
+                }
             }
-            abstractHessianInput.ReadEnd();
+            else
+            {
+                while (!abstractHessianInput.IsEnd())
+                {
+                    CHessianLog.AddBreadcrumb(i++);
+                    object item = abstractHessianInput.ReadObject(itemType);
+                    CHessianLog.RemoveBreadcrumb();
+                    addMethod.Invoke(list, new object[] { item });
+                }
+                abstractHessianInput.ReadEnd();
+            }
+
             return list;
         }
 
-        private Object ReadUntypedList(AbstractHessianInput abstractHessianInput)
+        private Type GetCollectionType(AbstractHessianInput abstractHessianInput, out Type itemType)
         {
-            IList listResult = new ArrayList();
-            abstractHessianInput.AddRef(listResult);
-            int i = 0;
-            while (!abstractHessianInput.IsEnd())
+            if (m_type != null && IsGenericList(m_type))
             {
-                CHessianLog.AddBreadcrumb(i++);
-                listResult.Add(abstractHessianInput.ReadObject());
-                CHessianLog.RemoveBreadcrumb();
+                Type[] args = m_type.GetGenericArguments();
+                itemType = args[0];
+                return typeof(List<>).MakeGenericType(itemType);
             }
-            abstractHessianInput.ReadEnd();
-            return listResult;
+            else if (m_type != null && IsGenericHashSet(m_type))
+            {
+                Type[] args = m_type.GetGenericArguments();
+                itemType = args[0];
+                return typeof(HashSet<>).MakeGenericType(itemType);
+            }
+            else
+            {
+                itemType = typeof(object);
+                return typeof(ArrayList);
+            }
         }
+
 
         /// <summary>
         /// Reads objects as list
