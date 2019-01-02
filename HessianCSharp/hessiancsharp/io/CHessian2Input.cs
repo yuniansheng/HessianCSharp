@@ -83,8 +83,7 @@ namespace hessiancsharp.io
 
         // the underlying input stream
         private Stream _inputStream;
-        //byte in java is c#'s sbyte
-        private readonly sbyte[] _buffer = new sbyte[SIZE];
+        private readonly byte[] _buffer = new byte[SIZE];
 
         // a peek character
         private int _offset;
@@ -959,7 +958,7 @@ namespace hessiancsharp.io
 
                 //case LONG_BYTE:
                 case BC_DOUBLE_BYTE:
-                    return (sbyte)(_offset < _length ? _buffer[_offset++] : Read());
+                    return ReadSByte();
 
                 //case INT_SHORT:
                 //case LONG_SHORT:
@@ -978,6 +977,14 @@ namespace hessiancsharp.io
 
                 default:
                     throw Expect("integer", tag);
+            }
+        }
+
+        private sbyte ReadSByte()
+        {
+            unchecked
+            {
+                return _offset < _length ? (sbyte)_buffer[_offset++] : (sbyte)Read();
             }
         }
 
@@ -1105,7 +1112,7 @@ namespace hessiancsharp.io
 
                 //case LONG_BYTE:
                 case BC_DOUBLE_BYTE:
-                    return (sbyte)(_offset < _length ? _buffer[_offset++] : Read());
+                    return ReadSByte();
 
                 //case INT_SHORT:
                 //case LONG_SHORT:
@@ -1404,7 +1411,7 @@ namespace hessiancsharp.io
                     return 1;
 
                 case BC_DOUBLE_BYTE:
-                    return (sbyte)(_offset < _length ? _buffer[_offset++] : Read());
+                    return ReadSByte();
 
                 case BC_DOUBLE_SHORT:
                     return (short)(256 * Read() + Read());
@@ -1856,7 +1863,7 @@ namespace hessiancsharp.io
                     return "1.0";
 
                 case BC_DOUBLE_BYTE:
-                    return ((sbyte)(_offset < _length ? _buffer[_offset++] : Read())).ToString();
+                    return ReadSByte().ToString();
 
                 case BC_DOUBLE_SHORT:
                     return (((short)(256 * Read() + Read()))).ToString();
@@ -3286,7 +3293,7 @@ namespace hessiancsharp.io
 
             if (offset + 3 < _length)
             {
-                sbyte[] buffer = _buffer;
+                byte[] buffer = _buffer;
 
                 int b32 = buffer[offset + 0] & 0xff;
                 int b24 = buffer[offset + 1] & 0xff;
@@ -3719,7 +3726,7 @@ namespace hessiancsharp.io
 
         private bool ReadBuffer()
         {
-            sbyte[] buffer = _buffer;
+            byte[] buffer = _buffer;
             int offset = _offset;
             int length = _length;
 
@@ -3731,8 +3738,7 @@ namespace hessiancsharp.io
             else
                 offset = 0;
 
-            //by convert buffer to byte[]，we can get a sbyte buffer direct from stream
-            int len = _inputStream.Read((byte[])(Array)buffer, offset, SIZE - offset);
+            int len = _inputStream.Read(buffer, offset, SIZE - offset);
 
             if (len <= 0)
             {
@@ -3790,7 +3796,7 @@ namespace hessiancsharp.io
             }
         }
 
-        private string BuildDebugContext(sbyte[] buffer, int offset, int length, int errorOffset)
+        private string BuildDebugContext(byte[] buffer, int offset, int length, int errorOffset)
         {
             StringBuilder sb = new StringBuilder();
 

@@ -20,7 +20,7 @@ namespace com.caucho.model
         public double minusDouble64;
         public double plusDouble64;
 
-        public byte[] buffer;
+        public sbyte[] buffer;
 
         public long longValue;
         public bool bValue;

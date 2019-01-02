@@ -37,6 +37,7 @@
 #region NAMESPACES
 
 using hessiancsharp.client;
+using hessiancsharp.util;
 using System;
 using System.Collections;
 
@@ -111,7 +112,6 @@ namespace hessiancsharp.io
                 case BOOLEAN_ARRAY:
                 case SHORT_ARRAY:
                 case INTEGER_ARRAY:
-                case SBYTE_ARRAY:
                 case LONG_ARRAY:
                 case FLOAT_ARRAY:
                 case DOUBLE_ARRAY:
@@ -127,6 +127,8 @@ namespace hessiancsharp.io
                     }
                 case BYTE_ARRAY:
                     return abstractHessianInput.ReadBytes();
+                case SBYTE_ARRAY:
+                    return abstractHessianInput.ReadBytes().ToSignedByteArray();
 
                 case CHARACTER_ARRAY:
                     {
