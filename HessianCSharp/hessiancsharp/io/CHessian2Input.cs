@@ -3010,7 +3010,7 @@ namespace hessiancsharp.io
 
             CSerializerFactory factory = FindSerializerFactory();
 
-            if (cl != reader.GetType() && cl != null)
+            if (cl != reader.GetOwnType() && cl != null)
             {
                 reader = factory.GetObjectDeserializer(type, cl);
 

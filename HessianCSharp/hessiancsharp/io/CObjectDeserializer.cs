@@ -113,6 +113,31 @@ namespace hessiancsharp.io
             return this.ReadMap(abstractHessianInput);
         }
 
+        public override object ReadObject(AbstractHessianInput abstractHessianInput, object[] fields)
+        {
+            string[] fieldNames = (string[])fields;
+            object result = CreateObject(abstractHessianInput);
+
+            IDictionary deserFields = GetDeserializableFields();
+            for (int i = 0; i < fieldNames.Length; i++)
+            {
+                string name = fieldNames[i];
+                FieldInfo field = (FieldInfo)deserFields[name];
+                if (field != null)
+                {
+                    object objFieldValue = abstractHessianInput.ReadObject(field.FieldType);
+                    field.SetValue(result, objFieldValue);
+                }
+                else
+                {
+                    // mw BUGFIX!!!
+                    object ignoreme = abstractHessianInput.ReadObject();
+                }
+            }
+
+            return result;
+        }
+
         /// <summary>
         /// Reads map
         /// </summary>
@@ -120,10 +145,7 @@ namespace hessiancsharp.io
         /// <returns>Read object or null</returns>
         public override object ReadMap(AbstractHessianInput abstractHessianInput)
         {
-            object result = Activator.CreateInstance(this.m_type);
-            //			object result = Activator.CreateInstance(this.m_type);
-            //			object result = null;
-
+            object result = CreateObject(abstractHessianInput);
             return ReadMap(abstractHessianInput, result);
         }
 
@@ -132,10 +154,8 @@ namespace hessiancsharp.io
         /// </summary>
         /// <param name="abstractHessianInput">HessianInput to read from</param>
         /// <returns>Read object or null</returns>
-        public object ReadMap(AbstractHessianInput abstractHessianInput, Object result)
+        public object ReadMap(AbstractHessianInput abstractHessianInput, object result)
         {
-            int refer = abstractHessianInput.AddRef(result);
-
             while (!abstractHessianInput.IsEnd())
             {
                 object objKey = abstractHessianInput.ReadObject();
@@ -168,5 +188,12 @@ namespace hessiancsharp.io
         }
 
         #endregion PUBLIC_METHODS
+
+        private object CreateObject(AbstractHessianInput abstractHessianInput)
+        {
+            object result = Activator.CreateInstance(m_type);
+            abstractHessianInput.AddRef(result);
+            return result;
+        }
     }
 }
