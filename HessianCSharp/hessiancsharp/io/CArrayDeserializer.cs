@@ -170,6 +170,25 @@ namespace hessiancsharp.io
             }
         }
 
+        public override object ReadLengthList(AbstractHessianInput abstractHessianInput, int intLength)
+        {
+            Array data = createArray(intLength);
+            abstractHessianInput.AddRef(data);
+
+            if (m_componentType != null)
+            {
+                for (int i = 0; i < data.Length; i++)
+                    data.SetValue(abstractHessianInput.ReadObject(m_componentType), i);
+            }
+            else
+            {
+                for (int i = 0; i < data.Length; i++)
+                    data.SetValue(abstractHessianInput.ReadObject(), i);
+            }
+
+            return data;
+        }
+
         /// <summary>
         /// Overriden toString - Method
         /// </summary>
