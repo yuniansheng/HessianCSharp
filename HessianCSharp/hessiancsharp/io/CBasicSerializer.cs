@@ -45,7 +45,7 @@ namespace hessiancsharp.io
     /// <summary>
     /// Serializing an object for known object types
     /// </summary>
-    public class CBasicSerializer : AbstractSerializer
+    public class CBasicSerializer : AbstractSerializer, IObjectSerializer
     {
         #region CLASS_FIELDS
 
@@ -55,6 +55,16 @@ namespace hessiancsharp.io
         private int m_intCode;
 
         #endregion CLASS_FIELDS
+
+        public const int BYTE_HANDLE = OBJECT_ARRAY + 1;
+        public const int SHORT_HANDLE = BYTE_HANDLE + 1;
+        public const int FLOAT_HANDLE = SHORT_HANDLE + 1;
+
+        private static CBasicSerializer BYTE_HANDLE_SERIALIZER = new CBasicSerializer(BYTE_HANDLE);
+
+        private static CBasicSerializer SHORT_HANDLE_SERIALIZER = new CBasicSerializer(SHORT_HANDLE);
+
+        private static CBasicSerializer FLOAT_HANDLE_SERIALIZER = new CBasicSerializer(FLOAT_HANDLE);
 
         #region CONSTRUCTORS
 
@@ -71,6 +81,21 @@ namespace hessiancsharp.io
         #endregion CONSTRUCTORS
 
         #region PUBLIC_METHODS
+
+        public AbstractSerializer GetObjectSerializer()
+        {
+            switch (m_intCode)
+            {
+                case BYTE:
+                    return BYTE_HANDLE_SERIALIZER;
+                case SHORT:
+                    return SHORT_HANDLE_SERIALIZER;
+                case FLOAT:
+                    return FLOAT_HANDLE_SERIALIZER;
+                default:
+                    return this;
+            }
+        }
 
         /// <summary>
         /// Writes primitive objects and arrayy of primitive objects
@@ -257,7 +282,7 @@ namespace hessiancsharp.io
                     throw new CHessianException(m_intCode + " " + obj.GetType().ToString()); //$NON-NLS-1$
             }
 
-        #endregion PUBLIC_METHODS
+            #endregion PUBLIC_METHODS
         }
     }
 }

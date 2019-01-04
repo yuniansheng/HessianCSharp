@@ -33,6 +33,7 @@
 ******************************************************************************************************
 */
 
+using hessiancsharp.util;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections;
@@ -67,25 +68,23 @@ namespace hessiancsharp.io
     public class CHessian2Output : AbstractHessianOutput
     {
         // should match Resin buffer size for perf
-        public readonly static int SIZE = 8 * 1024;
+        public const int SIZE = 8 * 1024;
 
         // the output stream/
-        protected OutputStream _os;
+        protected Stream _os;
 
         // map of references
-        private readonly IdentityIntMap _refs
-                = new IdentityIntMap(256);
+        private readonly IdentityIntMap _refs = new IdentityIntMap(256);
 
         private int _refCount = 0;
 
         private bool _isCloseStreamOnClose;
 
         // map of classes
-        private sealed IdentityIntMap _classRefs
-                = new IdentityIntMap(256);
+        private readonly IdentityIntMap _classRefs = new IdentityIntMap(256);
 
         // map of types
-        private HashMap<string, int> _typeRefs;
+        private Dictionary<string, int> _typeRefs;
 
         private readonly byte[] _buffer = new byte[SIZE];
         private int _offset;
@@ -110,20 +109,20 @@ namespace hessiancsharp.io
         ///
         /// <param name="os">the underlying output stream.</param>
         /// </summary>
-        public CHessian2Output(OutputStream os)
+        public CHessian2Output(Stream os)
         {
             Init(os);
         }
 
 
-        public void Init(OutputStream os)
+        public override void Init(Stream os)
         {
             Reset();
 
             _os = os;
         }
 
-        public void InitPacket(OutputStream os)
+        public void InitPacket(Stream os)
         {
             ResetReferences();
 
@@ -162,7 +161,7 @@ namespace hessiancsharp.io
         {
             WriteVersion();
 
-            int length = args != null ? args.length : 0;
+            int length = args != null ? args.Length : 0;
 
             StartCall(method, length);
 
@@ -190,7 +189,7 @@ namespace hessiancsharp.io
         /// <param name="method">the method name to call.</param>
         /// </summary>
 
-        public void StartCall(string method, int length)
+        public override void StartCall(string method, int length)
         {
             int offset = _offset;
 
@@ -289,7 +288,7 @@ namespace hessiancsharp.io
         /// </code></code>
         /// </summary>
 
-        public void CompleteCall()
+        public override void CompleteCall()
         {
             /*
             FlushIfFull();
@@ -308,7 +307,7 @@ namespace hessiancsharp.io
         /// </code>
         /// </summary>
 
-        public void StartReply()
+        public override void StartReply()
         {
             WriteVersion();
 
@@ -336,7 +335,7 @@ namespace hessiancsharp.io
         /// </code>
         /// </summary>
 
-        public void CompleteReply()
+        public override void CompleteReply()
         {
         }
 
@@ -399,7 +398,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="code">the fault code</param>, a three digit
         /// </summary>
-        public void WriteFault(string code, string message, object detail)
+        public override void WriteFault(string code, string message, object detail)
         {
             FlushIfFull();
 
@@ -430,18 +429,17 @@ namespace hessiancsharp.io
         /// Writes any object to the output stream.
         /// </summary>
 
-        public void WriteObject(object object)
+        public override void WriteObject(object obj)
         {
-            if (object == null)
+            if (obj == null)
             {
                 WriteNull();
                 return;
             }
 
-            Serializer serializer
-                    = FindSerializerFactory().GetObjectSerializer(object.GetClass());
+            AbstractSerializer serializer = FindSerializerFactory().GetObjectSerializer(obj.GetType());
 
-            serializer.WriteObject(object, thinputStream);
+            serializer.WriteObject(obj, this);
         }
 
         /// <summary>
@@ -456,7 +454,7 @@ namespace hessiancsharp.io
         ///
         /// <returns>true for variable lists</returns>, false for fixed lists
         /// </summary>
-        public bool WriteListBegin(int length, string type)
+        public override bool WriteListBegin(int length, string type)
         {
             FlushIfFull();
 
@@ -507,7 +505,7 @@ namespace hessiancsharp.io
         /// <summary>
         /// Writes the tail of the list to the stream for a variable-length list.
         /// </summary>
-        public void WriteListEnd()
+        public override void WriteListEnd()
         {
             FlushIfFull();
 
@@ -524,7 +522,7 @@ namespace hessiancsharp.io
         ///     ::= H (<value> <value>)* Z
         /// </code></code>
         /// </summary>
-        public void WriteMapBegin(string type)
+        public override void WriteMapBegin(string type)
         {
             if (SIZE < _offset + 32)
                 FlushBuffer();
@@ -542,7 +540,7 @@ namespace hessiancsharp.io
         /// <summary>
         /// Writes the tail of the map to the stream.
         /// </summary>
-        public void WriteMapEnd()
+        public override void WriteMapEnd()
         {
             if (SIZE < _offset + 32)
                 FlushBuffer();
@@ -558,7 +556,7 @@ namespace hessiancsharp.io
         /// </code></code>
         /// </summary>
 
-        public int WriteObjectBegin(string type)
+        public override int WriteObjectBegin(string type)
         {
             int newRef = _classRefs.Size();
             int refIndex = _classRefs.Put(type, newRef, false);
@@ -597,7 +595,7 @@ namespace hessiancsharp.io
         /// Writes the tail of the class definition to the stream.
         /// </summary>
 
-        public void WriteClassFieldLength(int len)
+        public override void WriteClassFieldLength(int len)
         {
             WriteInt(len);
         }
@@ -606,7 +604,7 @@ namespace hessiancsharp.io
         /// Writes the tail of the object definition to the stream.
         /// </summary>
 
-        public void WriteObjectEnd()
+        public override void WriteObjectEnd()
         {
         }
 
@@ -620,26 +618,23 @@ namespace hessiancsharp.io
         {
             FlushIfFull();
 
-            int len = type.Length();
+            int len = type.Length;
             if (len == 0)
             {
-                throw new IllegalArgumentException("empty type is not allowed");
+                throw new ArgumentException("empty type is not allowed", nameof(type));
             }
 
             if (_typeRefs == null)
-                _typeRefs = new HashMap<string, int>();
+                _typeRefs = new Dictionary<string, int>();
 
-            int typeRefV = (int)_typeRefs.Get(type);
-
-            if (typeRefV != null)
+            int typeRef;
+            if (_typeRefs.TryGetValue(type, out typeRef))
             {
-                int typeRef = typeRefV.IntValue();
-
                 WriteInt(typeRef);
             }
             else
             {
-                _typeRefs.Put(type, int.ValueOf(_typeRefs.Size()));
+                _typeRefs.Add(type, _typeRefs.Count);
 
                 WriteString(type);
             }
@@ -657,7 +652,7 @@ namespace hessiancsharp.io
         /// <param name="value">the bool value to write.</param>
         /// </summary>
 
-        public void WriteBoolean(bool value)
+        public override void WriteBoolean(bool value)
         {
             if (SIZE < _offset + 16)
                 FlushBuffer();
@@ -679,7 +674,7 @@ namespace hessiancsharp.io
         /// <param name="value">the integer value to write.</param>
         /// </summary>
 
-        public void WriteInt(int value)
+        public override void WriteInt(int value)
         {
             int offset = _offset;
             byte[] buffer = _buffer;
@@ -725,7 +720,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the long value to write.</param>
         /// </summary>
-        public void WriteLong(long value)
+        public override void WriteLong(long value)
         {
             int offset = _offset;
             byte[] buffer = _buffer;
@@ -789,7 +784,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the double value to write.</param>
         /// </summary>
-        public void WriteDouble(double value)
+        public override void WriteDouble(double value)
         {
             int offset = _offset;
             byte[] buffer = _buffer;
@@ -856,7 +851,7 @@ namespace hessiancsharp.io
                 return;
             }
 
-            long bits = Double.DoubleToLongBits(value);
+            long bits = BitConverter.DoubleToInt64Bits(value);
 
             buffer[offset + 0] = (byte)'D';
             buffer[offset + 1] = (byte)(bits >> 56);
@@ -871,17 +866,17 @@ namespace hessiancsharp.io
             _offset = offset + 9;
         }
 
-    /// <summary>
-    /// Writes a date to the stream.
-    ///
-    /// <code><pre>
-    /// date ::= d   b7 b6 b5 b4 b3 b2 b1 b0
-    ///      ::= x65 b3 b2 b1 b0
-    /// </code></code>
-    ///
-    /// <param name="time">the date in milliseconds from the epoch in UTC
-    </param>/// </summary>
-    public void WriteUTCDate(long time)
+        /// <summary>
+        /// Writes a date to the stream.
+        ///
+        /// <code><pre>
+        /// date ::= d   b7 b6 b5 b4 b3 b2 b1 b0
+        ///      ::= x65 b3 b2 b1 b0
+        /// </code></code>
+        ///
+        /// <param name="time">the date in milliseconds from the epoch in UTC</param>    
+        /// </summary>
+        public override void WriteUTCDate(long time)
         {
             if (SIZE < _offset + 32)
                 FlushBuffer();
@@ -931,7 +926,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the string value to write.</param>
         /// </summary>
-        public void WriteNull()
+        public override void WriteNull()
         {
             int offset = _offset;
             byte[] buffer = _buffer;
@@ -942,7 +937,7 @@ namespace hessiancsharp.io
                 offset = _offset;
             }
 
-            buffer[offset++] = 'N';
+            buffer[offset++] = (byte)'N';
 
             _offset = offset;
         }
@@ -963,7 +958,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the string value to write.</param>
         /// </summary>
-        public void WriteString(string value)
+        public override void WriteString(string value)
         {
             int offset = _offset;
             byte[] buffer = _buffer;
@@ -982,7 +977,7 @@ namespace hessiancsharp.io
             }
             else
             {
-                int length = value.Length();
+                int length = value.Length;
                 int strOffset = 0;
 
                 while (length > 0x8000)
@@ -997,8 +992,8 @@ namespace hessiancsharp.io
                         offset = _offset;
                     }
 
-                    // chunk can't end in high surrogate
-                    char tail = value.CharAt(strOffset + sublen - 1);
+                    // chunk can't end in high surrogate                    
+                    char tail = value[strOffset + sublen - 1];
 
                     if (0xd800 <= tail && tail <= 0xdbff)
                         sublen--;
@@ -1061,7 +1056,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the string value to write.</param>
         /// </summary>
-        public void WriteString(char[] buffer, int offset, int length)
+        public override void WriteString(char[] buffer, int offset, int length)
         {
             if (buffer == null)
             {
@@ -1134,17 +1129,17 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the string value to write.</param>
         /// </summary>
-        public void WriteBytes(byte[] buffer)
+        public override void WriteBytes(byte[] buffer)
         {
             if (buffer == null)
             {
                 if (SIZE < _offset + 16)
                     FlushBuffer();
 
-                _buffer[_offset++] = 'N';
+                _buffer[_offset++] = (byte)'N';
             }
             else
-                WriteBytes(buffer, 0, buffer.length);
+                WriteBytes(buffer, 0, buffer.Length);
         }
 
         /// <summary>
@@ -1163,7 +1158,7 @@ namespace hessiancsharp.io
         ///
         /// <param name="value">the string value to write.</param>
         /// </summary>
-        public void WriteBytes(byte[] buffer, int offset, int length)
+        public override void WriteBytes(byte[] buffer, int offset, int length)
         {
             if (buffer == null)
             {
@@ -1192,7 +1187,7 @@ namespace hessiancsharp.io
                     _buffer[_offset++] = (byte)(sublen >> 8);
                     _buffer[_offset++] = (byte)sublen;
 
-                    System.Arraycopy(buffer, offset, _buffer, _offset, sublen);
+                    Array.Copy(buffer, offset, _buffer, _offset, sublen);
                     _offset += sublen;
 
                     length -= sublen;
@@ -1220,7 +1215,7 @@ namespace hessiancsharp.io
                     _buffer[_offset++] = (byte)(length);
                 }
 
-                System.Arraycopy(buffer, offset, _buffer, _offset, length);
+                Array.Copy(buffer, offset, _buffer, _offset, length);
 
                 _offset += length;
             }
@@ -1232,7 +1227,7 @@ namespace hessiancsharp.io
         /// <code><pre>
         /// </code></code>
         /// </summary>
-        public void WriteByteBufferStart()
+        public override void WriteByteBufferStart()
         {
         }
 
@@ -1243,13 +1238,13 @@ namespace hessiancsharp.io
         /// b b16 b18 bytes
         /// </code></code>
         /// </summary>
-        public void WriteByteBufferPart(byte[] buffer, int offset, int length)
+        public override void WriteByteBufferPart(byte[] buffer, int offset, int length)
         {
             while (length > 0)
             {
                 FlushIfFull();
 
-                int sublen = _buffer.length - _offset;
+                int sublen = _buffer.Length - _offset;
 
                 if (length < sublen)
                     sublen = length;
@@ -1258,7 +1253,7 @@ namespace hessiancsharp.io
                 _buffer[_offset++] = (byte)(sublen >> 8);
                 _buffer[_offset++] = (byte)sublen;
 
-                System.Arraycopy(buffer, offset, _buffer, _offset, sublen);
+                Array.Copy(buffer, offset, _buffer, _offset, sublen);
 
                 _offset += sublen;
                 length -= sublen;
@@ -1273,7 +1268,7 @@ namespace hessiancsharp.io
         /// b b16 b18 bytes
         /// </code></code>
         /// </summary>
-        public void WriteByteBufferEnd(byte[] buffer, int offset, int length)
+        public override void WriteByteBufferEnd(byte[] buffer, int offset, int length)
         {
             WriteBytes(buffer, offset, length);
         }
@@ -1281,16 +1276,16 @@ namespace hessiancsharp.io
         /// <summary>
         /// Returns an output stream to write binary data.
         /// </summary>
-        public OutputStream GetBytesOutputStream()
+        public Stream GetBytesOutputStream()
         {
-            return new BytesOutputStream();
+            return new BytesOutputStream(this);
         }
 
         /// <summary>
         /// Writes a full output stream.
         /// </summary>
 
-        public void WriteByteStream(InputStream inputStream)
+        public override void WriteByteStream(Stream inputStream)
         {
             while (true)
             {
@@ -1302,7 +1297,7 @@ namespace hessiancsharp.io
                     len = SIZE - _offset - 3;
                 }
 
-                len = is.Read(_buffer, _offset + 3, len);
+                len = inputStream.Read(_buffer, _offset + 3, len);
 
                 if (len <= 0)
                 {
@@ -1328,7 +1323,7 @@ namespace hessiancsharp.io
         /// <param name="value">the integer value to write.</param>
         /// </summary>
 
-        protected void WriteRef(int value)
+        public override void WriteRef(int value)
         {
             if (SIZE < _offset + 16)
                 FlushBuffer();
@@ -1344,7 +1339,7 @@ namespace hessiancsharp.io
         /// <returns>true if we</returns>'re writing a refIndex.
         /// </summary>
 
-        public bool AddRef(object object)
+        public override bool AddRef(object obj)
         {
             if (_isUnshared)
             {
@@ -1354,7 +1349,7 @@ namespace hessiancsharp.io
 
             int newRef = _refCount;
 
-            int refIndex = AddRef(object, newRef, false);
+            int refIndex = AddRef(obj, newRef, false);
 
             if (refIndex != newRef)
             {
@@ -1371,7 +1366,7 @@ namespace hessiancsharp.io
         }
 
 
-        public int GetRef(object obj)
+        public override int GetRef(object obj)
         {
             if (_isUnshared)
                 return -1;
@@ -1383,7 +1378,7 @@ namespace hessiancsharp.io
         /// Removes a reference.
         /// </summary>
 
-        public bool RemoveRef(object obj)
+        public override bool RemoveRef(object obj)
         {
             if (_isUnshared)
             {
@@ -1403,7 +1398,7 @@ namespace hessiancsharp.io
         /// Replaces a reference from one object to another.
         /// </summary>
 
-        public bool ReplaceRef(object oldRef, object newRef)
+        public override bool ReplaceRef(object oldRef, object newRef)
         {
             if (_isUnshared)
             {
@@ -1478,7 +1473,7 @@ namespace hessiancsharp.io
         {
             int offset = _offset;
 
-            OutputStream os = _os;
+            Stream os = _os;
 
             if (os == null)
             {
@@ -1533,7 +1528,7 @@ namespace hessiancsharp.io
             }
             else
             {
-                int len = v.Length();
+                int len = v.Length;
                 _buffer[_offset++] = (byte)(len >> 8);
                 _buffer[_offset++] = (byte)(len);
 
@@ -1548,7 +1543,7 @@ namespace hessiancsharp.io
         /// </summary>
         public void PrintString(string v)
         {
-            PrintString(v, 0, v.Length());
+            PrintString(v, 0, v.Length);
         }
 
         /// <summary>
@@ -1570,7 +1565,7 @@ namespace hessiancsharp.io
                     offset = _offset;
                 }
 
-                char ch = v.CharAt(i + strOffset);
+                char ch = v[i + strOffset];
 
                 if (ch < 0x80)
                     buffer[offset++] = (byte)(ch);
@@ -1629,7 +1624,7 @@ namespace hessiancsharp.io
             _offset = offset;
         }
 
-        private sealed void FlushIfFull()
+        private void FlushIfFull()
         {
             int offset = _offset;
 
@@ -1639,7 +1634,7 @@ namespace hessiancsharp.io
             }
         }
 
-        public sealed void Flush()
+        public void Flush()
         {
             FlushBuffer();
 
@@ -1647,11 +1642,11 @@ namespace hessiancsharp.io
                 _os.Flush();
         }
 
-        public sealed void FlushBuffer()
+        public void FlushBuffer()
         {
             int offset = _offset;
 
-            OutputStream os = _os;
+            Stream os = _os;
 
             if (!_isPacket && offset > 0)
             {
@@ -1685,7 +1680,7 @@ namespace hessiancsharp.io
             // hessian/3a8c
             Flush();
 
-            OutputStream os = _os;
+            Stream os = _os;
             _os = null;
 
             if (os != null)
@@ -1707,7 +1702,7 @@ namespace hessiancsharp.io
         /// Resets the references for streaming.
         /// </summary>
 
-        public void ResetReferences()
+        public override void ResetReferences()
         {
             if (_refs != null)
             {
@@ -1734,78 +1729,90 @@ namespace hessiancsharp.io
             _isUnshared = false;
         }
 
-        class BytesOutputStream : OutputStream
+        private class BytesOutputStream : Stream
         {
+            private CHessian2Output _hessian2Output;
             private int _startOffset;
 
-            BytesOutputStream()
+            public override bool CanRead => throw new NotImplementedException();
+
+            public override bool CanSeek => throw new NotImplementedException();
+
+            public override bool CanWrite => throw new NotImplementedException();
+
+            public override long Length => throw new NotImplementedException();
+
+            public override long Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
+            public BytesOutputStream(CHessian2Output hessian2Output)
             {
-                if (SIZE < _offset + 16)
+                _hessian2Output = hessian2Output;
+                if (SIZE < _hessian2Output._offset + 16)
                 {
-                    Hessian2Output.this.FlushBuffer();
+                    _hessian2Output.FlushBuffer();
                 }
 
-                _startOffset = _offset;
-                _offset += 3; // skip 'b' xNN xNN
+                _startOffset = _hessian2Output._offset;
+                _hessian2Output._offset += 3; // skip 'b' xNN xNN
             }
 
 
             public void Write(int ch)
             {
-                if (SIZE <= _offset)
+                if (SIZE <= _hessian2Output._offset)
                 {
-                    int length = (_offset - _startOffset) - 3;
+                    int length = (_hessian2Output._offset - _startOffset) - 3;
 
-                    _buffer[_startOffset] = (byte)BC_BINARY_CHUNK;
-                    _buffer[_startOffset + 1] = (byte)(length >> 8);
-                    _buffer[_startOffset + 2] = (byte)(length);
+                    _hessian2Output._buffer[_startOffset] = (byte)BC_BINARY_CHUNK;
+                    _hessian2Output._buffer[_startOffset + 1] = (byte)(length >> 8);
+                    _hessian2Output._buffer[_startOffset + 2] = (byte)(length);
 
-                    Hessian2Output.this.FlushBuffer();
+                    _hessian2Output.FlushBuffer();
 
-                    _startOffset = _offset;
-                    _offset += 3;
+                    _startOffset = _hessian2Output._offset;
+                    _hessian2Output._offset += 3;
                 }
 
-                _buffer[_offset++] = (byte)ch;
+                _hessian2Output._buffer[_hessian2Output._offset++] = (byte)ch;
             }
 
 
-            public void Write(byte[] buffer, int offset, int length)
+            public override void Write(byte[] buffer, int offset, int length)
             {
                 while (length > 0)
                 {
-                    int sublen = SIZE - _offset;
+                    int sublen = SIZE - _hessian2Output._offset;
 
                     if (length < sublen)
                         sublen = length;
 
                     if (sublen > 0)
                     {
-                        System.Arraycopy(buffer, offset, _buffer, _offset, sublen);
-                        _offset += sublen;
+                        Array.Copy(buffer, offset, _hessian2Output._buffer, _hessian2Output._offset, sublen);
+                        _hessian2Output._offset += sublen;
                     }
 
                     length -= sublen;
                     offset += sublen;
 
-                    if (SIZE <= _offset)
+                    if (SIZE <= _hessian2Output._offset)
                     {
-                        int chunkLength = (_offset - _startOffset) - 3;
+                        int chunkLength = (_hessian2Output._offset - _startOffset) - 3;
 
-                        _buffer[_startOffset] = (byte)BC_BINARY_CHUNK;
-                        _buffer[_startOffset + 1] = (byte)(chunkLength >> 8);
-                        _buffer[_startOffset + 2] = (byte)(chunkLength);
+                        _hessian2Output._buffer[_startOffset] = (byte)BC_BINARY_CHUNK;
+                        _hessian2Output._buffer[_startOffset + 1] = (byte)(chunkLength >> 8);
+                        _hessian2Output._buffer[_startOffset + 2] = (byte)(chunkLength);
 
-                        Hessian2Output.this.FlushBuffer();
+                        _hessian2Output.FlushBuffer();
 
-                        _startOffset = _offset;
-                        _offset += 3;
+                        _startOffset = _hessian2Output._offset;
+                        _hessian2Output._offset += 3;
                     }
                 }
             }
 
 
-            public void Close()
+            public override void Close()
             {
                 int startOffset = _startOffset;
                 _startOffset = -1;
@@ -1813,13 +1820,33 @@ namespace hessiancsharp.io
                 if (startOffset < 0)
                     return;
 
-                int length = (_offset - startOffset) - 3;
+                int length = (_hessian2Output._offset - startOffset) - 3;
 
-                _buffer[startOffset] = (byte)'B';
-                _buffer[startOffset + 1] = (byte)(length >> 8);
-                _buffer[startOffset + 2] = (byte)(length);
+                _hessian2Output._buffer[startOffset] = (byte)'B';
+                _hessian2Output._buffer[startOffset + 1] = (byte)(length >> 8);
+                _hessian2Output._buffer[startOffset + 2] = (byte)(length);
 
-                Hessian2Output.this.FlushBuffer();
+                _hessian2Output.FlushBuffer();
+            }
+
+            public override void Flush()
+            {
+                throw new NotImplementedException();
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override long Seek(long offset, SeekOrigin origin)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void SetLength(long value)
+            {
+                throw new NotImplementedException();
             }
         }
     }

@@ -71,15 +71,15 @@ namespace burlapcsharp.io
          * */
 
         #region CONSTRUCTORS
-		/// <summary>
-		/// Constructor
-		/// </summary>
-		/// <param name="srOutput">Output stream</param>
-        public CBurlapOutput(Stream srOutput) 
-		{
-			Init(srOutput);
-		}
-		#endregion
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="srOutput">Output stream</param>
+        public CBurlapOutput(Stream srOutput)
+        {
+            Init(srOutput);
+        }
+        #endregion
 
         #region PUBLIC_METHODS
         /// <summary>
@@ -92,9 +92,9 @@ namespace burlapcsharp.io
 
             this.m_htRefs = null;
 
-            if (base.m_serializerFactory == null)
+            if (base._serializerFactory == null)
             {
-                base.m_serializerFactory = new CSerializerFactory();
+                base._serializerFactory = new CSerializerFactory();
             }
         }
 
@@ -131,7 +131,7 @@ namespace burlapcsharp.io
         /// </summary>
         /// <param name="method">the method name to call.
         /// </param>
-        public override void StartCall(String method)
+        public override void StartCall(string method)
         {
             Print("<burlap:call><method>");
             Print(method);
@@ -256,7 +256,7 @@ namespace burlapcsharp.io
             Print("</fault>");
         }
 
-  
+
         /// <summary>
         /// Writes any object to the output stream.
         /// </summary>
@@ -269,7 +269,7 @@ namespace burlapcsharp.io
                 return;
             }
 
-            AbstractSerializer abstractSerializer = m_serializerFactory.GetSerializer(obj.GetType());
+            AbstractSerializer abstractSerializer = _serializerFactory.GetSerializer(obj.GetType());
 
             abstractSerializer.WriteObject(obj, this);
         }
@@ -288,7 +288,7 @@ namespace burlapcsharp.io
         /// </list>
         /// </pre></code>
         /// </summary>
-        public override void WriteListBegin(int length, String type)
+        public override bool WriteListBegin(int length, String type)
         {
             Print("<list><type>");
             if (type != null)
@@ -296,6 +296,7 @@ namespace burlapcsharp.io
             Print("</type><length>");
             Print(length);
             Print("</length>");
+            return true;
         }
 
         /// <summary> Writes the tail of the list to the stream.</summary>
@@ -617,7 +618,13 @@ namespace burlapcsharp.io
             }
         }
 
-        
+        /// <summary>
+        /// Writes a byte buffer to the stream.
+        /// </summary>
+        public override void WriteByteBufferStart()
+        {
+            throw new NotSupportedException();
+        }
 
         /// <summary> Writes a byte buffer to the stream.
         /// 
@@ -681,6 +688,19 @@ namespace burlapcsharp.io
                 m_htRefs.Add(objReference, m_htRefs.Count);
                 return false;
             }
+        }
+
+        public override int GetRef(object obj)
+        {
+            if (m_htRefs == null)
+                return -1;
+
+            var refIndex = (int?)m_htRefs[obj];
+
+            if (refIndex != null)
+                return refIndex.Value;
+            else
+                return -1;
         }
 
         /// <summary>
@@ -813,7 +833,7 @@ namespace burlapcsharp.io
         public virtual void printDate(DateTime dateTime)
         {
             //Todo: Parameter wurde geändert in DateTime!
-            
+
             int year = dateTime.Year;
 
             m_srOutput.WriteByte((System.Byte)('0' + (year / 1000 % 10)));
@@ -821,7 +841,7 @@ namespace burlapcsharp.io
             m_srOutput.WriteByte((System.Byte)('0' + (year / 10 % 10)));
             m_srOutput.WriteByte((System.Byte)('0' + (year % 10)));
 
-            
+
             int month = dateTime.Month + 1;
             m_srOutput.WriteByte((System.Byte)('0' + (month / 10 % 10)));
             m_srOutput.WriteByte((System.Byte)('0' + (month % 10)));

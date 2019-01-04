@@ -51,7 +51,10 @@ namespace hessiancsharp.io
         #region CLASS_FIELDS
 
         // serializer factory
-        protected CSerializerFactory m_serializerFactory = null;
+        private CSerializerFactory _defaultSerializerFactory;
+        protected CSerializerFactory _serializerFactory = null;
+
+        private byte[] _byteBuffer;
 
         #endregion CLASS_FIELDS
 
@@ -62,10 +65,24 @@ namespace hessiancsharp.io
         /// </summary>
         public CSerializerFactory CSerializerFactory
         {
-            set { m_serializerFactory = value; }
+            set { _serializerFactory = value; }
         }
 
         #endregion PROPERTIES
+
+        protected CSerializerFactory FindSerializerFactory()
+        {
+            CSerializerFactory factory = _serializerFactory;
+
+            if (factory == null)
+            {
+                factory = CSerializerFactory.CreateDefault();
+                _defaultSerializerFactory = factory;
+                _serializerFactory = factory;
+            }
+
+            return factory;
+        }
 
         #region PUBLIC_METHODS
 
@@ -84,7 +101,7 @@ namespace hessiancsharp.io
         /// m b16 b8 method-namek
         /// </code>
         /// <param name="strMethod">the method name to call</param>
-        public abstract void StartCall(string strMethod);
+        public abstract void StartCall(string strMethod, int length);
 
         /// <summary>
         /// Writes the method call
@@ -197,6 +214,8 @@ namespace hessiancsharp.io
         /// <param name="intLength">Value length</param>
         public abstract void WriteBytes(byte[] arrBuffer, int intOffset, int intLength);
 
+        public abstract void WriteByteBufferStart();
+
         /// <summary>
         /// Writes a part of the byte buffer to the stream
         /// <code>
@@ -206,9 +225,7 @@ namespace hessiancsharp.io
         /// <param name="arrBuffer">Array with bytes to write</param>
         /// <param name="intOffset">Vslue offset</param>
         /// <param name="intLength">Value length</param>
-        public abstract void WriteByteBufferPart(byte[] arrBuffer,
-            int intOffset,
-            int intLength);
+        public abstract void WriteByteBufferPart(byte[] arrBuffer, int intOffset, int intLength);
 
         /// <summary>
         /// Writes the last chunk of a byte buffer to the stream
@@ -219,9 +236,38 @@ namespace hessiancsharp.io
         /// <param name="arrbuffer">Array with bytes to write</param>
         /// <param name="intOffset">Vslue offset</param>
         /// <param name="intLength">Value length</param>
-        public abstract void WriteByteBufferEnd(byte[] arrbuffer,
-            int intOffset,
-            int intLength);
+        public abstract void WriteByteBufferEnd(byte[] arrbuffer, int intOffset, int intLength);
+
+        public virtual void WriteByteStream(Stream inputStream)
+        {
+            WriteByteBufferStart();
+
+            if (_byteBuffer == null)
+                _byteBuffer = new byte[1024];
+
+            byte[] buffer = _byteBuffer;
+
+            int len;
+            while ((len = inputStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                if (len < buffer.Length)
+                {
+                    int len2 = inputStream.Read(buffer, len, buffer.Length - len);
+
+                    if (len2 < 0)
+                    {
+                        WriteByteBufferEnd(buffer, 0, len);
+                        return;
+                    }
+
+                    len += len2;
+                }
+
+                WriteByteBufferPart(buffer, 0, len);
+            }
+
+            WriteByteBufferEnd(buffer, 0, 0);
+        }
 
         /// <summary>
         /// Writes a reference
@@ -259,6 +305,13 @@ namespace hessiancsharp.io
         /// <returns>true if the object has been written</returns>
         public abstract bool AddRef(object objReference);
 
+        public abstract int GetRef(object obj);
+
+        /// <summary>
+        /// Resets the references for streaming.
+        /// </summary>
+        public virtual void ResetReferences() { }
+
         /// <summary>
         /// Writes a generic object to the output stream
         /// </summary>
@@ -277,7 +330,7 @@ namespace hessiancsharp.io
         /// </summary>
         /// <param name="intLength">Length of array</param>
         /// <param name="strType">Type name of the array</param>
-        public abstract void WriteListBegin(int intLength, string strType);
+        public abstract bool WriteListBegin(int intLength, string strType);
 
         /// <summary>
         /// Writes the tail of the list to the stream
@@ -309,7 +362,41 @@ namespace hessiancsharp.io
         /// </summary>
         /// <param name="strType">type of remote object</param>
         /// <param name="strUrl">URL of remote object</param>
-        public abstract void WriteRemote(string strType, string strUrl);
+        public virtual void WriteRemote(string strType, string strUrl) { }
+
+        /// <summary>
+        /// Writes the object header to the stream (for Hessian 2.0), or a
+        /// Map for Hessian 1.0.  Object writers will call
+        /// <see cref="WriteObjectBegin(string)"/> followed by the map contents and then call <see cref="WriteObjectEnd">.
+        /// <code>
+        /// C type int key*
+        /// C int value*
+        /// </code>
+        /// </summary>
+        /// <returns>true if the object has already been defined.</returns>
+        public virtual int WriteObjectBegin(string type)
+        {
+            WriteMapBegin(type);
+            return -2;
+        }
+
+        public virtual void WriteClassFieldLength(int len)
+        {
+        }
+
+        /// <summary>
+        /// Writes the tail of the object to the stream.
+        /// </summary>
+        public virtual void WriteObjectEnd()
+        {
+        }
+
+        public void WriteReply(object o)
+        {
+            StartReply();
+            WriteObject(o);
+            CompleteReply();
+        }
 
         public abstract void StartReply();
 

@@ -63,6 +63,7 @@ namespace hessiancsharp.io
         /// map of references
         /// </summary>
         private Hashtable m_htRefs;
+        private int _version = 1;
 
         #endregion CLASS_FIELDS
 
@@ -91,10 +92,18 @@ namespace hessiancsharp.io
 
             this.m_htRefs = null;
 
-            if (base.m_serializerFactory == null)
+            if (base._serializerFactory == null)
             {
-                base.m_serializerFactory = new CSerializerFactory();
+                base._serializerFactory = new CSerializerFactory();
             }
+        }
+
+        /// <summary>
+        /// Sets the client's version.
+        /// </summary>
+        public void setVersion(int version)
+        {
+            _version = version;
         }
 
         /// <summary>
@@ -104,7 +113,8 @@ namespace hessiancsharp.io
         /// <param name="args">Method args</param>
         public void Call(string strMethod, object[] args)
         {
-            StartCall(strMethod);
+            int length = args != null ? args.Length : 0;
+            StartCall(strMethod, length);
 
             if (args != null)
             {
@@ -126,11 +136,11 @@ namespace hessiancsharp.io
         ///</code>
         /// </summary>
         /// <param name="strMethod">method the method name to call.</param>
-        public override void StartCall(string strMethod)
+        public override void StartCall(string strMethod, int length)
         {
             m_srOutput.WriteByte((byte)(PROT_CALL_START));
+            m_srOutput.WriteByte((byte)_version);
             m_srOutput.WriteByte(0);
-            m_srOutput.WriteByte(1);
             m_srOutput.WriteByte((byte)(PROT_METHOD));
             int intLength = strMethod.Length;
             m_srOutput.WriteByte((byte)(intLength >> 8));
@@ -244,7 +254,7 @@ namespace hessiancsharp.io
                 return;
             }
 
-            AbstractSerializer abstractSerializer = m_serializerFactory.GetSerializer(obj.GetType());
+            AbstractSerializer abstractSerializer = _serializerFactory.GetSerializer(obj.GetType());
 
             abstractSerializer.WriteObject(obj, this);
         }
@@ -262,7 +272,7 @@ namespace hessiancsharp.io
         /// </summary>
         /// <param name="intLength"></param>
         /// <param name="strType"></param>
-        public override void WriteListBegin(int intLength, string strType)
+        public override bool WriteListBegin(int intLength, string strType)
         {
             m_srOutput.WriteByte((byte)(PROT_LIST_TYPE));
             m_srOutput.WriteByte((byte)(PROT_TYPE));
@@ -273,6 +283,7 @@ namespace hessiancsharp.io
             m_srOutput.WriteByte((byte)(intLength >> 16));
             m_srOutput.WriteByte((byte)(intLength >> 8));
             m_srOutput.WriteByte((byte)(intLength));
+            return true;
         }
 
         /// <summary>
@@ -578,6 +589,10 @@ namespace hessiancsharp.io
             }
         }
 
+        public override void WriteByteBufferStart()
+        {
+        }
+
         /// <summary>
         /// Writes a part of the byte buffer to the stream
         /// <code>
@@ -657,11 +672,10 @@ namespace hessiancsharp.io
                 m_htRefs = new Hashtable();
             }
 
-            if (m_htRefs.Contains(objReference))
+            var value = (int?)m_htRefs[objReference];
+            if (value != null)
             {
-                int t_ref = (int)m_htRefs[objReference];
-                int value = t_ref;
-                WriteRef(value);
+                WriteRef(value.Value);
                 return true;
             }
             else
@@ -669,6 +683,25 @@ namespace hessiancsharp.io
                 m_htRefs.Add(objReference, m_htRefs.Count);
                 return false;
             }
+        }
+
+        public override int GetRef(object obj)
+        {
+            int? value;
+
+            if (m_htRefs == null)
+                return -1;
+
+            value = (int?)m_htRefs[obj];
+            if (value == null)
+                return -1;
+            else
+                return value.Value;
+        }
+
+        public override void ResetReferences()
+        {
+            m_htRefs?.Clear();
         }
 
         /// <summary>
@@ -698,9 +731,10 @@ namespace hessiancsharp.io
         /// <returns>True, if the refernece was successfully replaced, otherwiese False</returns>
         public override bool ReplaceRef(object objOldReference, object objNewReference)
         {
-            if (m_htRefs.Contains(objOldReference))
+            var value = (int?)m_htRefs[objNewReference];
+
+            if (value != null)
             {
-                int value = (int)m_htRefs[objNewReference];
                 m_htRefs.Remove(objOldReference);
                 m_htRefs.Add(objNewReference, value);
                 return true;

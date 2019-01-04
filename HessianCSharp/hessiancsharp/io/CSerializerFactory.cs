@@ -170,6 +170,16 @@ namespace hessiancsharp.io
 
         #region PUBLIC_METHODS
 
+        public AbstractSerializer GetObjectSerializer(Type type)
+        {
+            AbstractSerializer serializer = GetSerializer(type);
+
+            if (serializer is IObjectSerializer)
+                return ((IObjectSerializer)serializer).GetObjectSerializer();
+            else
+                return serializer;
+        }
+
         /// <summary>
         /// Gets the serializer-Instance according to given type
         /// </summary>

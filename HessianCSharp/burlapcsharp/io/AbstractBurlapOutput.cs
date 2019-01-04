@@ -54,5 +54,11 @@ namespace burlapcsharp.io
     /// </summary>
     public abstract class AbstractBurlapOutput : AbstractHessianOutput
     {
+        public override void StartCall(string method, int length)
+        {
+            StartCall(method);
+        }
+
+        public abstract void StartCall(string method);
     }
 }
